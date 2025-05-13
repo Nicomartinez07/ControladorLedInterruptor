@@ -10,7 +10,8 @@
   <button onclick="enviarMensaje('OFF')">Apagar LED</button>
   <p id="estado"></p>
 
-  <script src="https://unpkg.com/paho-mqtt/mqtt.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/mqttws31.min.js"></script>
+
   <script>
     const clientId = "webClient-" + Math.random().toString(16).substr(2, 8);
     const client = new Paho.MQTT.Client("broker.hivemq.com", 8000, "/mqtt", clientId);
