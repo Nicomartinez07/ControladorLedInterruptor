@@ -19,26 +19,29 @@
  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js" type="text/javascript"></script>
 
   <script>
-    const clientId = "webClient-" + Math.random().toString(16).substr(2, 8);
-    const client = new Paho.MQTT.Client("broker.hivemq.com", 8000, "/mqtt", clientId);
+  const clientId = "webClient-" + Math.random().toString(16).substr(2, 8);
+  const client = new Paho.MQTT.Client("broker.hivemq.com", 8884, "/mqtt", clientId);
 
-    client.connect({
-      onSuccess: () => {
-        document.getElementById("estado").innerText = "Conectado a MQTT";
-        console.log("Conectado al broker MQTT");
-      },
-      onFailure: err => {
-        console.error("Error al conectar:", err);
-      }
-    });
-
-    function enviarMensaje(mensaje) {
-      const topic = "etec/led";
-      const msg = new Paho.MQTT.Message(mensaje);
-      msg.destinationName = topic;
-      client.send(msg);
-      document.getElementById("estado").innerText = `Mensaje "${mensaje}" enviado`;
+  client.connect({
+    useSSL: true,
+    onSuccess: () => {
+      document.getElementById("estado").innerText = "Conectado a MQTT";
+      console.log("Conectado al broker MQTT");
+    },
+    onFailure: err => {
+      console.error("Error al conectar:", err);
+      document.getElementById("estado").innerText = "Error de conexión";
     }
-  </script>
+  });
+
+  function enviarMensaje(mensaje) {
+    const topic = "etec/led";
+    const msg = new Paho.MQTT.Message(mensaje);
+    msg.destinationName = topic;
+    client.send(msg);
+    document.getElementById("estado").innerText = `Mensaje "${mensaje}" enviado`;
+  }
+</script>
+
 </body>
 </html>
