@@ -12,36 +12,54 @@
   <h1>Control Interruptor 220v</h1>
   <button onclick="enviarMensaje('HABILITAR')">Habilitar</button>
   <button onclick="enviarMensaje('DESHABILITAR')">Deshabilitar</button>
+
   <h3>Mensaje:</h3>
   <p id="estado"></p>
 
-  <!-- Librería Paho MQTT para navegador -->
- <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js" type="text/javascript"></script>
+  <h3>📦 Volumen del tanque (litros):</h3>
+  <p id="volumen">Esperando datos...</p>
+
+  <!-- Librería Paho MQTT -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js"></script>
 
   <script>
-  const clientId = "webClient-" + Math.random().toString(16).substr(2, 8);
-  const client = new Paho.MQTT.Client("broker.hivemq.com", 8884, "/mqtt", clientId);
+    const clientId = "webClient-" + Math.random().toString(16).substr(2, 8);
+    const client = new Paho.MQTT.Client("broker.hivemq.com", 8884, "/mqtt", clientId);
 
-  client.connect({
-    useSSL: true,
-    onSuccess: () => {
-      document.getElementById("estado").innerText = "Conectado a MQTT";
-      console.log("Conectado al broker MQTT");
-    },
-    onFailure: err => {
-      console.error("Error al conectar:", err);
-      document.getElementById("estado").innerText = "Error de conexión";
-    }
-  });
+    client.onConnectionLost = function(responseObject) {
+      if (responseObject.errorCode !== 0) {
+        console.error("Conexión perdida:", responseObject.errorMessage);
+        document.getElementById("estado").innerText = "Conexión perdida";
+      }
+    };
 
-  function enviarMensaje(mensaje) {
-    const topic = "etec/led";
-    const msg = new Paho.MQTT.Message(mensaje);
-    msg.destinationName = topic;
-    client.send(msg);
-    document.getElementById("estado").innerText = `Mensaje "${mensaje}" enviado`;
-  }
-</script>
+    client.onMessageArrived = function(message) {
+      console.log("Mensaje recibido:", message.payloadString, "desde", message.destinationName);
+      if (message.destinationName === "esp32/tanque/volumen") {
+        document.getElementById("volumen").innerText = message.payloadString + " litros";
+      }
+    };
 
+    client.connect({
+      useSSL: true,
+      onSuccess: () => {
+        document.getElementById("estado").innerText = "Conectado a MQTT";
+        console.log("Conectado al broker MQTT");
+        client.subscribe("esp32/tanque/volumen"); // Suscripción al volumen
+      },
+      onFailure: err => {
+        console.error("Error al conectar:", err);
+        document.getElementById("estado").innerText = "Error de conexión";
+      }
+    });
+
+    function enviarMensaje(mensaje) {
+      const topic = "etec/led";
+      const msg = new Paho.MQTT.Message(mensaje);
+      msg.destinationName = topic;
+      client.send(msg);
+      document.getElementById("estado").innerText = `Mensaje "${mensaje}" enviado`;
+    }//a
+  </script>
 </body>
 </html>
