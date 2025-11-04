@@ -24,7 +24,7 @@
 
   <script>
     const clientId = "webClient-" + Math.random().toString(16).substr(2, 8);
-    const client = new Paho.MQTT.Client("broker.hivemq.com", 8884, "/mqtt", clientId);
+    const client = new Paho.MQTT.Client("wss://broker.hivemq.com:8884/mqtt", clientId);
 
     client.onConnectionLost = function(responseObject) {
       if (responseObject.errorCode !== 0) {
