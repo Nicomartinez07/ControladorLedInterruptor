@@ -351,7 +351,7 @@
 
   <script>
     const clientId = "webClient-" + Math.random().toString(16).substr(2, 8);
-    const client = new Paho.MQTT.Client("test.mosquitto.org", 8080, "/ws", clientId);
+    const client = new Paho.MQTT.Client("wss://test.mosquitto.org:8081/mqtt", clientId);
 
     client.onConnectionLost = function(responseObject) {
       if (responseObject.errorCode !== 0) {
@@ -369,7 +369,7 @@
 
     function connectMQTT() {
       client.connect({
-        useSSL: false,
+        useSSL: true,
         onSuccess: () => {
           updateConnectionStatus("Conectado al broker MQTT", true);
           console.log("Conectado al broker MQTT");
