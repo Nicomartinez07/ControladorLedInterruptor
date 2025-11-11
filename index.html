@@ -206,10 +206,17 @@
       text-align: center;
     }
     
+    /* Contenedor del tanque y las marcas de capacidad */
+    .tank-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    
     .water-tank {
       width: 150px;
       height: 200px;
-      margin: 0 auto;
       background: rgba(255, 255, 255, 0.1);
       border-radius: 10px 10px 0 0;
       position: relative;
@@ -226,31 +233,28 @@
       border-radius: 7px 7px 0 0;
     }
     
-    .water-wave {
-      position: absolute;
-      top: -10px;
-      width: 200%;
-      height: 20px;
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 40%;
-      animation: wave 3s infinite linear;
-    }
-    
-    @keyframes wave {
-      0% {
-        transform: translateX(-25%) rotate(0deg);
-      }
-      100% {
-        transform: translateX(-25%) rotate(360deg);
-      }
-    }
-    
-    .tank-capacity {
+    /* Marcas de capacidad en vertical */
+    .capacity-marks {
       display: flex;
+      flex-direction: column;
       justify-content: space-between;
-      margin-top: 10px;
+      height: 200px;
+      margin-left: 10px;
       color: var(--gray);
       font-size: 0.9rem;
+    }
+    
+    .capacity-mark {
+      display: flex;
+      align-items: center;
+    }
+    
+    .capacity-mark::before {
+      content: "";
+      width: 10px;
+      height: 2px;
+      background-color: var(--gray);
+      margin-right: 5px;
     }
     
     footer {
@@ -341,16 +345,17 @@
         <div class="volume-display" id="volumen">--</div>
         <p class="volume-label">Litros</p>
         
-        <div class="water-tank">
-          <div class="water-level" id="waterLevel" style="height: 0%">
-            <div class="water-wave"></div>
+        <!-- Contenedor del tanque y marcas de capacidad -->
+        <div class="tank-container">
+          <div class="water-tank">
+            <div class="water-level" id="waterLevel" style="height: 0%"></div>
           </div>
-        </div>
-        
-        <div class="tank-capacity">
-          <span>0 L</span>
-          <span>50 L</span>
-          <span>100 L</span>
+          <!-- Marcas de capacidad en vertical -->
+          <div class="capacity-marks">
+            <div class="capacity-mark">10 L</div>
+            <div class="capacity-mark">5 L</div>
+            <div class="capacity-mark">0 L</div>
+          </div>
         </div>
       </div>
     </div>
@@ -407,8 +412,8 @@
       // Actualizar la visualización del tanque de agua
       const volumeValue = parseFloat(volume);
       if (!isNaN(volumeValue)) {
-        // Asumiendo que el tanque tiene una capacidad máxima de 100 litros
-        const percentage = Math.min(100, Math.max(0, (volumeValue / 100) * 100));
+        // Asumiendo que el tanque tiene una capacidad máxima de 10 litros
+        const percentage = Math.min(100, Math.max(0, (volumeValue / 10) * 100));
         document.getElementById("waterLevel").style.height = percentage + "%";
       }
     }

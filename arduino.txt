@@ -1,0 +1,181 @@
+#include <WiFi.h>
+#include <PubSubClient.h>
+
+// ------------------- PINES -------------------
+// Pines del primer código (Control)
+const int LED = 27;
+const int TOMA = 26;
+
+// Pines del segundo código (Sensor Ultrasónico)
+const int trigPin = 5;
+const int echoPin = 18;
+
+// ------------------- CONFIG SENSOR -------------------
+const int Radius = 5;       // cm
+const int height = 80;      // cm
+const float Pi = 3.14159;
+const int Distance = 1;     // cm de margen
+#define SOUND_SPEED 0.034   // velocidad del sonido en cm/us
+
+// ------------------- VARIABLES SENSOR -------------------
+long duration;
+float distanceCm;
+
+// ------------------- CONFIG RED -------------------
+const char* ssid = "ETEC-UBA";
+const char* password = "ETEC-alumnos@UBA";
+
+// ------------------- CONFIG MQTT -------------------
+const char* mqtt_server = "test.mosquitto.org";
+const int mqtt_port = 1883;
+// ¡Usamos ambos topics!
+const char* mqtt_topic_publish = "esp32/tanque/volumen"; // Para ENVIAR data
+const char* mqtt_topic_subscribe = "etec/led";          // Para RECIBIR órdenes
+
+// ------------------- OBJETOS -------------------
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+// ------------------- FUNCIONES -----------------------
+
+// Función para conectar al WiFi (del código 2)
+void setup_wifi() {
+  delay(10);
+  Serial.println("Conectando a WiFi...");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi conectado");
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
+}
+
+// Función CALLBACK (traída del código 1)
+// Se ejecuta CADA VEZ que llega un mensaje al topic suscrito
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Mensaje recibido en topic: ");
+  Serial.println(topic);
+
+  String mensaje;
+  for (unsigned int i = 0; i < length; i++) {
+    mensaje += (char)payload[i];
+  }
+
+  Serial.print("Contenido: ");
+  Serial.println(mensaje);
+
+  if (mensaje == "ON") {
+    digitalWrite(LED, HIGH);
+    Serial.println("LED encendido");
+  } else if (mensaje == "OFF") {
+    digitalWrite(LED, LOW);
+    Serial.println("LED apagado");
+  } else if (mensaje == "HABILITAR") {
+    digitalWrite(TOMA, HIGH);
+    Serial.println("Toma Habilitado");
+  } else if (mensaje == "DESHABILITAR") {
+    digitalWrite(TOMA, LOW);
+    Serial.println("Toma Deshabilitado");
+  } else if (mensaje == "ESP32 conectado al broker MQTT") {
+    Serial.println("Conexion establecida");
+  } else {
+    Serial.println("Comando no reconocido");
+  }
+}
+
+// Función RECONNECT (del código 2, MODIFICADA)
+// Se conecta y AHORA TAMBIÉN se suscribe
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Intentando conexión MQTT...");
+    String clientId = "ESP32Client-";
+    clientId += String(random(0xffff), HEX); // ID único
+
+    if (client.connect(clientId.c_str())) {
+      Serial.println("conectado");
+      
+      // --- ¡MODIFICACIÓN IMPORTANTE! ---
+      // Nos suscribimos al topic para recibir órdenes
+      client.subscribe(mqtt_topic_subscribe);
+      Serial.print("Suscrito a topic: ");
+      Serial.println(mqtt_topic_subscribe);
+      
+      // Opcional: publicamos el mensaje de conexión del primer código
+      client.publish(mqtt_topic_subscribe, "ESP32 conectado al broker MQTT");
+
+    } else {
+      Serial.print("Fallo, rc=");
+      Serial.print(client.state());
+      Serial.println(" intentando de nuevo en 5s");
+      delay(5000);
+    }
+  }
+}
+
+// ------------------- SETUP --------------------
+void setup() {
+  Serial.begin(115200);
+
+  // Inicializar TODOS los pines
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  pinMode(LED, OUTPUT);
+  pinMode(TOMA, OUTPUT);
+
+  setup_wifi();
+  
+  client.setServer(mqtt_server, mqtt_port);
+  // --- ¡MUY IMPORTANTE! ---
+  // Le decimos a MQTT qué función usar cuando llegue un mensaje
+  client.setCallback(callback); 
+}
+
+// ------------------- LOOP --------------------
+void loop() {
+  if (!client.connected()) {
+    reconnect(); // Si se desconecta, intenta reconectar
+  }
+
+  // client.loop() es CLAVE. Revisa si llegaron mensajes
+  // y mantiene viva la conexión.
+  client.loop(); 
+
+  // --- Tarea 1: Medir y Publicar Volumen (del código 2) ---
+  
+  // Medición del sensor ultrasónico
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  duration = pulseIn(echoPin, HIGH, 30000); // espera hasta 30ms
+  
+  if (duration == 0) {
+    Serial.println("Error: no se recibió eco (¿sensor desconectado?)");
+    // No usamos delay, solo saltamos esta medición
+  } else {
+    // Solo calcula y publica si la medición fue exitosa
+    distanceCm = duration * SOUND_SPEED / 2;
+    float areaBase = Pi * Radius * Radius;
+    float volumen = areaBase * (height - distanceCm + Distance) / 1000.0; // volumen en litros
+
+    // Enviar a MQTT
+    char msg[50];
+    snprintf(msg, 50, "%.2f", volumen);
+    client.publish(mqtt_topic_publish, msg);
+
+    Serial.print("Volumen enviado: ");
+    Serial.println(msg);
+  }
+
+  // --- Tarea 2: Escuchar órdenes (del código 1) ---
+  // Esta tarea se maneja "automáticamente" gracias a 
+  // client.loop() (arriba) y la función callback()
+  
+  delay(1000); // espera 1 segundo entre mediciones
+}
+
+
